@@ -6,7 +6,7 @@
 }
 
 .top-nav {
-  background: linear-gradient(135deg, #125fd8 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #81a6e0 0%, #041b59 100%);
   color: white;
   padding: 1rem 2rem;
   display: flex;
@@ -172,8 +172,8 @@ main {
 
 .product-image {
   width: 100%;
-  max-width: 180px;
-  height: 180px;
+  max-width: 55;
+  height: 55;
   margin: 0 auto;
   object-fit: contain;
   object-position: center;

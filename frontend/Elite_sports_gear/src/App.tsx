@@ -11,7 +11,7 @@ import OrdersPage from './pages/OrdersPage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
-type Page = 'landing' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
+type Page =  | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
 
 type Product = {
   id: number

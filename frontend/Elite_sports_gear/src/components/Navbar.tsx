@@ -1,3 +1,6 @@
+import logo from '../assets/logo.png';
+
+
 interface NavbarProps {
   currentPage: string
   navItems: Array<{ key: string; label: string }>
@@ -8,8 +11,8 @@ export default function Navbar({ currentPage, navItems, onNavigate }: NavbarProp
   return (
     <nav className="top-nav">
       <button className="brand-btn" onClick={() => onNavigate('landing')}>
-        <span className="brand-mark">⚽</span>
-        <span>Elite Sports Gear</span>
+       <p> <img src={logo} alt="Logo" style={{ height: 100}} /> <br />
+        ELITE SPORTS GEAR</p>
       </button>
       <div className="nav-links">
         {navItems.map((item) => (
