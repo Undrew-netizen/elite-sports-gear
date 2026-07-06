@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'store',
 ]
@@ -128,9 +129,26 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
-    ]
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
 }
+
+# Email settings for order notifications (console backend for local development)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'Elite Sports Gear <noreply@elitegear.com>'
+BUSINESS_EMAIL = 'elitesportsgear254@gmail.com'
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# M-Pesa configuration placeholders (set these in your environment or here)
+MPESA_ENV = 'sandbox'  # or 'production'
+MPESA_CONSUMER_KEY = ''
+MPESA_CONSUMER_SECRET = ''
+MPESA_SHORTCODE = ''
+MPESA_PASSKEY = ''
+MPESA_CALLBACK_URL = 'https://your-domain.com/api/mpesa/callback/'

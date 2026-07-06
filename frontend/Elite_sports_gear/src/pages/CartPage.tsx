@@ -4,6 +4,7 @@ interface CartPageProps {
     name: string
     price: number
     quantity: number
+    image?: string | null
   }>
   cartCount: number
   cartTotal: number
@@ -36,10 +37,13 @@ export default function CartPage({ cartItems, cartCount, cartTotal, updateQuanti
         ) : (
           <div className="stacked-list">
             {cartItems.map((item) => (
-              <div key={item.id} className="summary-card">
-                <div>
-                  <h3>{item.name}</h3>
-                  <p>{currency(item.price)} each</p>
+              <div key={item.id} className="summary-card cart-item-card">
+                <div className="cart-item-meta">
+                  {item.image ? <img className="cart-item-image" src={item.image} alt={item.name} /> : null}
+                  <div>
+                    <h3>{item.name}</h3>
+                    <p>{currency(item.price)} each</p>
+                  </div>
                 </div>
                 <div className="quantity-row">
                   <button className="icon-btn" onClick={() => updateQuantity(item.id, -1)}>

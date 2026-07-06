@@ -19,13 +19,18 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             Explore featured picks
           </button>
         </div>
+        <div className="hero-highlights">
+          <span>Secure M-Pesa checkout</span>
+          <span>Fast delivery across Kenya</span>
+          <span>Register once, buy faster next time</span>
+        </div>
       </div>
-      <div className="hero-card">
-        <h2>Why players love us</h2>
+      <div className="hero-card hero-card-strong">
+        <h2>Why players trust us</h2>
         <ul>
           <li>Fast shipping on all orders</li>
           <li>Trusted brands and athlete-tested gear</li>
-          <li>Flexible checkout and easy wishlist saving</li>
+          <li>Flexible checkout and easy wishlist management</li>
         </ul>
       </div>
     </section>

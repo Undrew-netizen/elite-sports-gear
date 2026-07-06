@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
+import { API_BASE_URL } from './api'
 import LandingPage from './pages/LandingPage'
 import HomePage from './pages/HomePage'
 import ProductsPage from './pages/ProductsPage'
@@ -8,23 +9,26 @@ import WishlistPage from './pages/WishlistPage'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrdersPage from './pages/OrdersPage'
+import AdminProducts from './pages/AdminProducts'
+import AdminOrders from './pages/AdminOrders'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
-type Page =  | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
+type Page = 'landing' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
 
 type Product = {
   id: number
   name: string
   price: number
   category: string
+  category_id?: number | null
   description: string
   featured?: boolean
   tag: string
   image?: string | null
 }
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+// API_BASE_URL imported from src/api.ts
 
 type OrderItem = {
   id: number
@@ -52,8 +56,26 @@ function App() {
   const [orders, setOrders] = useState<Order[]>([])
   const currentPage = (location.pathname.replace('/', '') || 'landing') as Page
   const [wishlist, setWishlist] = useState<number[]>([1, 3])
-  const [cart, setCart] = useState<Record<number, number>>({ 2: 1, 4: 2 })
+  const [cart, setCart] = useState<Record<number, number>>({})
   const [orderPlaced, setOrderPlaced] = useState(false)
+  const [orderMessage, setOrderMessage] = useState<string | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem('elite-auth-token'))
+  const [authUser, setAuthUser] = useState<{ username: string | null; email: string | null }>(() => {
+    const storedUser = localStorage.getItem('elite-auth-user')
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser)
+      } catch {
+        return { username: null, email: null }
+      }
+    }
+    return { username: null, email: null }
+  })
+  const [authMessage, setAuthMessage] = useState<string | null>(null)
+  const [accountMode, setAccountMode] = useState<'login' | 'register'>('login')
+  const [authIsAdmin, setAuthIsAdmin] = useState<boolean>(false)
+  const [categoryFilter, setCategoryFilter] = useState<number | string | null>(null)
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -90,10 +112,125 @@ function App() {
       void loadProducts()
     }
 
+    // load categories once and ensure desired set/order
+    const loadCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/categories/`)
+        let data: Array<{ id: number; name: string }> = []
+        if (res.ok) data = await res.json()
+
+        const desired = ['jerseys', 'tracky', 'jackets', 'boots', 'balls', 'accessories']
+        const byLower: Record<string, { id: number; name: string }> = {}
+        data.forEach((c) => (byLower[c.name.toLowerCase()] = c))
+
+        const ordered = desired.map((d) => {
+          const found = byLower[d]
+          return found ? { id: found.id, name: found.name } : { id: null as any, name: d }
+        })
+        setCategories(ordered)
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    void loadCategories()
+
     if (currentPage === 'orders') {
       void loadOrders()
     }
   }, [currentPage])
+
+  useEffect(() => {
+    if (authToken) {
+      localStorage.setItem('elite-auth-token', authToken)
+    } else {
+      localStorage.removeItem('elite-auth-token')
+    }
+
+    localStorage.setItem('elite-auth-user', JSON.stringify(authUser))
+    // fetch user details (is_staff) when token changes
+    const loadMe = async () => {
+      if (!authToken) {
+        setAuthIsAdmin(false)
+        return
+      }
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/auth/me/`, {
+          headers: { 'Content-Type': 'application/json', Authorization: `Token ${authToken}` },
+        })
+        if (!resp.ok) {
+          setAuthIsAdmin(false)
+          return
+        }
+        const data = await resp.json()
+        setAuthUser({ username: data.username, email: data.email })
+        setAuthIsAdmin(Boolean(data.is_staff))
+      } catch (e) {
+        setAuthIsAdmin(false)
+      }
+    }
+    void loadMe()
+  }, [authToken, authUser])
+
+  const getAuthHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (authToken) {
+      headers.Authorization = `Token ${authToken}`
+    }
+    return headers
+  }
+
+  const handleRegister = async (username: string, email: string, password: string) => {
+    setAuthMessage(null)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Registration failed')
+      }
+      setAuthToken(data.token)
+      setAuthUser({ username: data.username, email: data.email })
+      setAuthMessage('Account created successfully. You are now logged in.')
+      setAccountMode('login')
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Registration error')
+    }
+  }
+
+  const handleLogin = async (username: string, password: string) => {
+    setAuthMessage(null)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Login failed')
+      }
+      setAuthToken(data.token)
+      setAuthUser({ username: data.username, email: data.email })
+      setAuthMessage('Logged in successfully.')
+      setAccountMode('login')
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Login error')
+    }
+  }
+
+  const logout = () => {
+    setAuthToken(null)
+    setAuthUser({ username: null, email: null })
+    setAuthMessage('You have been logged out.')
+    setAccountMode('login')
+    setAuthIsAdmin(false)
+  }
 
   const cartItems = useMemo(
     () =>
@@ -134,27 +271,63 @@ function App() {
     })
   }
 
-  const handleCheckout = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setOrderPlaced(true)
-    setCart({})
+  const handleCheckout = async (checkoutData: {
+    full_name: string
+    email: string
+    address: string
+    payment_method: string
+    phone?: string
+  }) => {
+    setOrderPlaced(false)
+    setOrderMessage(null)
+
+    if (cartItems.length === 0) {
+      setOrderMessage('Your cart is empty. Add items before placing an order.')
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders/create/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          full_name: checkoutData.full_name,
+          email: checkoutData.email,
+          address: checkoutData.address,
+          phone: checkoutData.phone || '',
+          payment_method: checkoutData.payment_method,
+          items: cartItems.map((item) => ({ product_id: item.id, quantity: item.quantity })),
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Unable to place order')
+      }
+      setOrderPlaced(true)
+      setCart({})
+      setOrderMessage(`Order #${data.id} placed. Confirmation sent to ${checkoutData.email}.`)
+      return data
+    } catch (error) {
+      setOrderMessage(error instanceof Error ? error.message : 'Order submission failed')
+      throw error
+    }
   }
 
-  const navItems: { key: Page; label: string }[] = [
-    { key: 'landing', label: 'Landing' },
+  const baseNav = [
     { key: 'home', label: 'Home' },
     { key: 'products', label: 'Products' },
     { key: 'wishlist', label: 'Wishlist' },
     { key: 'cart', label: 'Cart' },
-    { key: 'checkout', label: 'Checkout' },
     { key: 'orders', label: 'Orders' },
   ]
 
-  const goTo = (page: string) => navigate(page === 'landing' ? '/' : `/${page}`)
+  const navItems: { key: string; label: string }[] = authIsAdmin ? [...baseNav, { key: 'admin/products', label: 'Admin' }] : baseNav
+
+  const goTo = (page: string) => navigate(page === 'home' ? '/home' : `/${page}`)
 
   return (
     <div className="app-shell">
-      <Navbar currentPage={currentPage} navItems={navItems} onNavigate={goTo} />
+      <Navbar currentPage={currentPage} navItems={navItems} onNavigate={goTo} cartCount={cartCount} />
 
       <main>
         <Routes>
@@ -168,6 +341,9 @@ function App() {
                 wishlist={wishlist}
                 toggleWishlist={toggleWishlist}
                 addToCart={addToCart}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                categories={categories}
                 onNavigate={goTo}
               />
             }
@@ -181,6 +357,9 @@ function App() {
                 wishlist={wishlist}
                 toggleWishlist={toggleWishlist}
                 addToCart={addToCart}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                categories={categories}
               />
             }
           />
@@ -199,8 +378,27 @@ function App() {
           />
           <Route
             path="/checkout"
-            element={<CheckoutPage orderPlaced={orderPlaced} cartTotal={cartTotal} handleCheckout={handleCheckout} />}
+            element={
+              <CheckoutPage
+                orderPlaced={orderPlaced}
+                cartTotal={cartTotal}
+                cartItems={cartItems}
+                handleCheckout={handleCheckout}
+                apiBaseUrl={API_BASE_URL}
+                authToken={authToken}
+                authUser={authUser}
+                accountMode={accountMode}
+                setAccountMode={setAccountMode}
+                handleLogin={handleLogin}
+                handleRegister={handleRegister}
+                authMessage={authMessage}
+                logout={logout}
+                orderMessage={orderMessage}
+              />
+            }
           />
+          <Route path="/admin/products" element={<AdminProducts authToken={authToken} />} />
+          <Route path="/admin/orders" element={<AdminOrders authToken={authToken} />} />
           <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} />} />
         </Routes>
       </main>
@@ -211,4 +409,3 @@ function App() {
 }
 
 export default App
-

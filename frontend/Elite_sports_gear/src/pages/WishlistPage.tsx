@@ -42,7 +42,7 @@ export default function WishlistPage({ catalog, wishlist, addToCart }: WishlistP
         <div className="card-grid">
           {wishlistItems.map((product) => (
             <article key={product.id} className="product-card">
-              {product.image ? <img className="product-image" src={product.image} alt={product.name} /> : null}
+              <img className="product-image" src={product.image || '/placeholder.svg'} alt={product.name} />
               <h3>{product.name}</h3>
               <p>{product.description}</p>
               <div className="card-footer">
