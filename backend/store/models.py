@@ -41,7 +41,7 @@ class Order(models.Model):
     delivery_address = models.TextField(blank=True)
     payment_method = models.CharField(
         max_length=20,
-        choices=[('card', 'Card'), ('mpesa', 'M-Pesa')],
+        choices=[('whatsapp', 'WhatsApp'), ('card', 'Card'), ('mpesa', 'M-Pesa')],
         default='card',
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PLACED)

@@ -1,9 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
-from django.utils import timezone
-import base64
-import requests
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
@@ -54,9 +51,19 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-created_at')
     serializer_class = OrderSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return self.queryset
+        if user.is_authenticated:
+            return self.queryset.filter(user=user)
+        return self.queryset.none()
+
     def get_permissions(self):
-        # only admins can list/retrieve/update orders
-        if self.action in ['list', 'retrieve', 'partial_update', 'update', 'destroy']:
+        if self.action == 'retrieve':
+            return [IsAuthenticated()]
+        # only admins can list/update/delete orders
+        if self.action in ['list', 'partial_update', 'update', 'destroy']:
             return [IsAdminUser()]
         return [permissions.AllowAny()]
 
@@ -71,18 +78,7 @@ class OrderCreateView(APIView):
             # send emails
             self._send_order_emails(order, serializer.validated_data)
 
-            # if MPesa selected, attempt STK push
-            mpesa_result = None
-            if serializer.validated_data.get('payment_method') == 'mpesa':
-                phone = serializer.validated_data.get('phone')
-                try:
-                    mpesa_result = self._initiate_stk_push(order, phone, int(order.total), str(order.id))
-                except Exception as e:
-                    mpesa_result = {'error': str(e)}
-
             result = OrderSerializer(order, context={'request': request}).data
-            if mpesa_result is not None:
-                result['_mpesa'] = mpesa_result
 
             return Response(result, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -112,55 +108,39 @@ class OrderCreateView(APIView):
 
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipient_list)
 
-    def _initiate_stk_push(self, order, phone, amount, account_ref):
-        # Validate MPesa settings
-        key = getattr(settings, 'MPESA_CONSUMER_KEY', '')
-        secret = getattr(settings, 'MPESA_CONSUMER_SECRET', '')
-        shortcode = getattr(settings, 'MPESA_SHORTCODE', '')
-        passkey = getattr(settings, 'MPESA_PASSKEY', '')
-        callback = getattr(settings, 'MPESA_CALLBACK_URL', '')
-        env = getattr(settings, 'MPESA_ENV', 'sandbox')
 
-        if not (key and secret and shortcode and passkey and callback):
-            return {'status': 'skipped', 'detail': 'MPesa credentials not configured.'}
+class MpesaCallbackView(APIView):
+    permission_classes = [AllowAny]
 
-        base_url = 'https://sandbox.safaricom.co.ke' if env == 'sandbox' else 'https://api.safaricom.co.ke'
+    def post(self, request):
+        payload = request.data or {}
+        # STK callback nested under Body.stkCallback
+        stk = payload.get('Body', {}).get('stkCallback') if isinstance(payload, dict) else None
+        if not stk:
+            return Response({'detail': 'Invalid callback payload'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get OAuth token
-        oauth_url = f'{base_url}/oauth/v1/generate?grant_type=client_credentials'
-        auth = (key, secret)
-        resp = requests.get(oauth_url, auth=auth, timeout=10)
-        resp.raise_for_status()
-        access_token = resp.json().get('access_token')
+        checkout_request_id = stk.get('CheckoutRequestID')
+        result_code = stk.get('ResultCode')
+        result_desc = stk.get('ResultDesc')
 
-        timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
-        password_str = f"{shortcode}{passkey}{timestamp}"
-        password = base64.b64encode(password_str.encode()).decode()
+        order = None
+        if checkout_request_id:
+            order = Order.objects.filter(mpesa_checkout_request_id=checkout_request_id).first()
 
-        stk_url = f'{base_url}/mpesa/stkpush/v1/processrequest'
-        payload = {
-            'BusinessShortCode': shortcode,
-            'Password': password,
-            'Timestamp': timestamp,
-            'TransactionType': 'CustomerPayBillOnline',
-            'Amount': amount,
-            'PartyA': phone,
-            'PartyB': shortcode,
-            'PhoneNumber': phone,
-            'CallBackURL': callback,
-            'AccountReference': account_ref,
-            'TransactionDesc': f'Order {account_ref} payment',
-        }
-        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-        r = requests.post(stk_url, json=payload, headers=headers, timeout=10)
-        r.raise_for_status()
-        data = r.json()
-        # store CheckoutRequestID if present to correlate callback
-        checkout_id = data.get('CheckoutRequestID') or data.get('checkoutRequestID')
-        if checkout_id:
-            order.mpesa_checkout_request_id = checkout_id
+        if not order:
+            return Response({'detail': 'Order not found for checkout id'}, status=status.HTTP_404_NOT_FOUND)
+
+        if str(result_code) == '0':
+            order.status = Order.STATUS_CONFIRMED
             order.save()
-        return data
+            # send confirmation email with details
+            self._send_payment_confirmation_email(order)
+        else:
+            # keep order as placed; optionally store failure info
+            order.status = Order.STATUS_PLACED
+            order.save()
+
+        return Response({'status': 'ok'})
 
     def _send_payment_confirmation_email(self, order):
         subject = f'Payment received for order #{order.id}'
@@ -186,40 +166,6 @@ class OrderCreateView(APIView):
             recipient_list.append(business_email)
 
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipient_list)
-
-
-class MpesaCallbackView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        payload = request.data or {}
-        # STK callback nested under Body.stkCallback
-        stk = payload.get('Body', {}).get('stkCallback') if isinstance(payload, dict) else None
-        if not stk:
-            return Response({'detail': 'Invalid callback payload'}, status=status.HTTP_400_BAD_REQUEST)
-
-        checkout_request_id = stk.get('CheckoutRequestID')
-        result_code = stk.get('ResultCode')
-        result_desc = stk.get('ResultDesc')
-
-        order = None
-        if checkout_request_id:
-            order = Order.objects.filter(mpesa_checkout_request_id=checkout_request_id).first()
-
-        if not order:
-            return Response({'detail': 'Order not found for checkout id'}, status=status.HTTP_404_NOT_FOUND)
-
-        if result_code == 0:
-            order.status = Order.STATUS_CONFIRMED
-            order.save()
-            # send confirmation email with details
-            self._send_payment_confirmation_email(order)
-        else:
-            # keep order as placed; optionally store failure info
-            order.status = Order.STATUS_PLACED
-            order.save()
-
-        return Response({'status': 'ok'})
 
 
 class UserDetailView(APIView):

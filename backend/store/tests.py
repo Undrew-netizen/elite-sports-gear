@@ -1,15 +1,19 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Product
+from .models import Category, Product
 
 
 class ProductApiTests(TestCase):
 	def setUp(self):
+		cleats = Category.objects.create(name='Cleats')
+		goalkeeper = Category.objects.create(name='Goalkeeper')
+		ball = Category.objects.create(name='Ball')
+
 		Product.objects.create(
 			name='Velocity Pro Boots',
 			price=129,
-			category='Cleats',
+			category=cleats,
 			description='Lightweight boots designed for explosive sprints and precise control.',
 			featured=True,
 			tag='Best Seller',
@@ -17,7 +21,7 @@ class ProductApiTests(TestCase):
 		Product.objects.create(
 			name='Storm Keeper Gloves',
 			price=79,
-			category='Goalkeeper',
+			category=goalkeeper,
 			description='Premium grip and shock absorption for confident dives and punches.',
 			featured=True,
 			tag='New Arrival',
@@ -25,7 +29,7 @@ class ProductApiTests(TestCase):
 		Product.objects.create(
 			name='Elite Training Ball',
 			price=45,
-			category='Ball',
+			category=ball,
 			description='Tournament-ready ball with a durable cover and consistent flight.',
 			featured=True,
 			tag='Top Rated',

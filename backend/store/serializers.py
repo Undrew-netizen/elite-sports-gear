@@ -92,7 +92,7 @@ class OrderCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     address = serializers.CharField(max_length=500)
     phone = serializers.CharField(max_length=30, allow_blank=True, required=False)
-    payment_method = serializers.ChoiceField(choices=[('card', 'Card'), ('mpesa', 'M-Pesa')])
+    payment_method = serializers.ChoiceField(choices=[('whatsapp', 'WhatsApp'), ('card', 'Card'), ('mpesa', 'M-Pesa')])
     items = OrderItemCreateSerializer(many=True)
 
     def validate_items(self, value):

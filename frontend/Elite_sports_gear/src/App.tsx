@@ -108,7 +108,7 @@ function App() {
       }
     }
 
-    if (currentPage === 'home' || currentPage === 'products' || currentPage === 'wishlist') {
+    if (currentPage === 'home' || currentPage === 'products' || currentPage === 'wishlist' || currentPage === 'cart' || currentPage === 'checkout') {
       void loadProducts()
     }
 
@@ -384,7 +384,6 @@ function App() {
                 cartTotal={cartTotal}
                 cartItems={cartItems}
                 handleCheckout={handleCheckout}
-                apiBaseUrl={API_BASE_URL}
                 authToken={authToken}
                 authUser={authUser}
                 accountMode={accountMode}

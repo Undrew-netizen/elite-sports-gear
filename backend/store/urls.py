@@ -18,10 +18,10 @@ router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
-    path('', include(router.urls)),
     path('orders/create/', OrderCreateView.as_view(), name='order-create'),
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/me/', UserDetailView.as_view(), name='auth-me'),
+    path('', include(router.urls)),
 ]

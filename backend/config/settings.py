@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,16 @@ SECRET_KEY = 'django-insecure-nc(pbmzf!l_l_9tta8j*ccs2)q+ycjmqknr2$x49i#v5q6#+4z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]', '192.168.1.103']
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+    '[::1]',
+    'testserver',
+    '192.168.1.103',
+    '.ngrok-free.app',
+    '.ngrok.app',
+]
 
 
 # Application definition
@@ -138,7 +148,7 @@ REST_FRAMEWORK = {
 
 # Email settings for order notifications (console backend for local development)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'Elite Sports Gear <noreply@elitegear.com>'
+DEFAULT_FROM_EMAIL = 'Elite Sports Gear <noreply@elitesportsgear.com>'
 BUSINESS_EMAIL = 'elitesportsgear254@gmail.com'
 
 # Media files (uploaded images)
@@ -146,9 +156,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # M-Pesa configuration placeholders (set these in your environment or here)
-MPESA_ENV = 'sandbox'  # or 'production'
-MPESA_CONSUMER_KEY = ''
-MPESA_CONSUMER_SECRET = ''
-MPESA_SHORTCODE = ''
-MPESA_PASSKEY = ''
-MPESA_CALLBACK_URL = 'https://your-domain.com/api/mpesa/callback/'
+MPESA_ENV = os.getenv('MPESA_ENV', 'sandbox')  # or 'production'
+MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY', 'XBO56O4dbEkzAGUFV8Z6a0khAhzzv0eMyjREYkARaWCoe5vS')
+MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET', 'C1vs5u8jGQTP5MroNGIqAXuSOJBAU35P5P1OkJ3G5JqGRSFBqLiEx05evVHW3w4X')
+MPESA_SHORTCODE = os.getenv('MPESA_SHORTCODE', '')
+MPESA_PASSKEY = os.getenv('MPESA_PASSKEY', '')
+MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL', 'https://your-domain.com/api/mpesa/callback/')

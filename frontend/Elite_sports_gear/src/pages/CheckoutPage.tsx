@@ -20,7 +20,6 @@ interface CheckoutPageProps {
     phone?: string
   }) => Promise<any>
   orderMessage: string | null
-  apiBaseUrl: string
 }
 
 const currency = (value: number) =>
@@ -29,6 +28,8 @@ const currency = (value: number) =>
     currency: 'KES',
     maximumFractionDigits: 0,
   }).format(value)
+
+const WHATSAPP_NUMBER = '254791808323'
 
 export default function CheckoutPage({
   orderPlaced,
@@ -48,10 +49,8 @@ export default function CheckoutPage({
   const [fullName, setFullName] = useState(authUser.username ?? '')
   const [email, setEmail] = useState(authUser.email ?? '')
   const [address, setAddress] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('mpesa')
   const [phone, setPhone] = useState('')
-  const [mpesaMessage, setMpesaMessage] = useState<string | null>(null)
-  const [polling, setPolling] = useState(false)
+  const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
   const [loginUsername, setLoginUsername] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [registerUsername, setRegisterUsername] = useState('')
@@ -63,67 +62,54 @@ export default function CheckoutPage({
     setFullName(authUser.username ?? '')
   }, [authUser])
 
+  const buildWhatsAppUrl = (orderId: number | string, normalizedPhone: string) => {
+    const itemLines = cartItems.flatMap((item) => {
+      const lines = [`- ${item.quantity} x ${item.name} @ ${currency(item.price)}`]
+      if (item.image) {
+        lines.push(`  Image: ${item.image}`)
+      }
+      return lines
+    })
+    const message = [
+      'Hello Elite Sports Gear, I have placed an order.',
+      '',
+      `Order: #${orderId}`,
+      `Name: ${fullName}`,
+      `Phone: ${normalizedPhone}`,
+      `Email: ${email}`,
+      `Delivery address: ${address}`,
+      '',
+      'Items:',
+      ...itemLines,
+      '',
+      `Total: ${currency(cartTotal)}`,
+    ].join('\n')
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+  }
+
   const submitCheckout = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    // Client-side phone validation/normalization for Kenyan numbers
-    let normalizedPhone = ''
-    if (paymentMethod === 'mpesa') {
-      const v = phone.trim()
-      const m = v.match(/^(?:\+?254|0)(7\d{8})$/)
-      if (!m) {
-        setMpesaMessage('Invalid phone. Use 07XXXXXXXX or 2547XXXXXXXX format.')
-        return
-      }
-      normalizedPhone = '254' + m[1]
-      setMpesaMessage(null)
+    const v = phone.trim()
+    const m = v.match(/^(?:\+?254|0)(7\d{8})$/)
+    if (!m) {
+      setCheckoutMessage('Invalid phone. Use 07XXXXXXXX or 2547XXXXXXXX format.')
+      return
     }
+    const normalizedPhone = '254' + m[1]
+    setCheckoutMessage(null)
 
     try {
-      const result = await handleCheckout({ full_name: fullName, email, address, payment_method: paymentMethod, phone: normalizedPhone })
+      const result = await handleCheckout({
+        full_name: fullName,
+        email,
+        address,
+        payment_method: 'whatsapp',
+        phone: normalizedPhone,
+      })
 
-      // if MPesa was initiated, handle STK response and poll order status
-      if (result && result._mpesa) {
-        const mp = result._mpesa
-        if (mp.error) {
-          setMpesaMessage(`MPesa error: ${mp.error}`)
-          return
-        }
-        if (mp.status === 'skipped') {
-          setMpesaMessage('MPesa not configured on server; order created without payment.')
-          return
-        }
-
-        // likely STK push sent
-        setMpesaMessage('M-Pesa STK push initiated. Check your phone to complete payment.')
-        setPolling(true)
-
-        const orderId = result.id
-        let attempts = 0
-        const maxAttempts = 24 // ~2 minutes if interval=5s
-        const interval = 5000
-        const timer = setInterval(async () => {
-          attempts += 1
-          try {
-            const resp = await fetch(`${apiBaseUrl}/api/orders/${orderId}/`, {
-              headers: { 'Content-Type': 'application/json', Authorization: authToken ? `Token ${authToken}` : '' },
-            })
-            if (resp.ok) {
-              const od = await resp.json()
-              if (od.status === 'confirmed' || od.status === 'complete') {
-                clearInterval(timer)
-                setPolling(false)
-                setMpesaMessage('Payment confirmed. Thank you!')
-              }
-            }
-          } catch (e) {
-            // ignore network errors and continue polling
-          }
-          if (attempts >= maxAttempts) {
-            clearInterval(timer)
-            setPolling(false)
-            setMpesaMessage('Timed out waiting for payment confirmation. Please check your M-Pesa and orders page.')
-          }
-        }, interval)
+      if (result?.id) {
+        window.location.href = buildWhatsAppUrl(result.id, normalizedPhone)
       }
     } catch (err) {
       // handle error already set in App state
@@ -144,10 +130,10 @@ export default function CheckoutPage({
     <section className="checkout-layout">
       <div className="summary-card">
         <p className="eyebrow">Checkout</p>
-        <h2>{orderPlaced ? 'Order confirmed!' : 'Secure your gear'}</h2>
+        <h2>{orderPlaced ? 'Order placed!' : 'Secure your gear'}</h2>
         {orderMessage ? <div className="alert-message">{orderMessage}</div> : null}
         {orderPlaced ? (
-          <p>Your order is confirmed. We sent the confirmation to your email and to our team.</p>
+          <p>Your order was saved. WhatsApp will open with the order details ready to send.</p>
         ) : (
           <>
             {authMessage ? <div className="alert-message">{authMessage}</div> : null}
@@ -247,42 +233,17 @@ export default function CheckoutPage({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                 />
-                <div className="payment-options">
-                  <label>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="mpesa"
-                      checked={paymentMethod === 'mpesa'}
-                      onChange={() => setPaymentMethod('mpesa')}
-                    />
-                    Pay with M-Pesa
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="card"
-                      checked={paymentMethod === 'card'}
-                      onChange={() => setPaymentMethod('card')}
-                    />
-                    Pay with card
-                  </label>
-                </div>
-                {paymentMethod === 'mpesa' ? (
-                  <input
-                    type="tel"
-                    placeholder="Phone (e.g. 07XXXXXXXX)"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                ) : null}
+                <input
+                  type="tel"
+                  placeholder="Phone (e.g. 07XXXXXXXX)"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
                 <button className="primary-btn wide" type="submit">
-                  Place order
+                  Continue to WhatsApp
                 </button>
-                {mpesaMessage ? <div className="alert-message">{mpesaMessage}</div> : null}
-                {polling ? <div className="info-message">Waiting for payment confirmation...</div> : null}
+                {checkoutMessage ? <div className="alert-message">{checkoutMessage}</div> : null}
               </form>
             )}
           </>
@@ -291,7 +252,7 @@ export default function CheckoutPage({
       <aside className="summary-card summary-card-large">
         <div className="summary-stack">
           <h3>Order summary</h3>
-          <p className="hero-copy">Review your selected gear and confirm with fast M-Pesa checkout.</p>
+          <p className="hero-copy">Review your selected gear and send the order details on WhatsApp.</p>
           <div className="summary-row">
             <span>Items</span>
             <strong>{cartItems.length}</strong>
