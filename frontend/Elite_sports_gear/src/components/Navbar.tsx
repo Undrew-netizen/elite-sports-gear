@@ -1,4 +1,4 @@
-import logo from '../assets/logo.gif';
+import logo from '../assets/logo.svg';
 
 
 interface NavbarProps {
@@ -12,7 +12,7 @@ function Icon({ name }: { name: string }) {
   switch (name) {
     case 'home':
       return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"  ><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
       )
     case 'products':
       return (
@@ -43,9 +43,8 @@ export default function Navbar({ currentPage, navItems, onNavigate, cartCount = 
   return (
     <nav className="top-nav">
       <button className="brand-btn" onClick={() => onNavigate('home')}>
-        <img src={logo} alt="Logo" style={{ height: 56, width: 56, marginRight: 8 }} />
-        <span>ELITE SPORTS GEAR</span>
-      </button>
+        <img src={logo} alt="Logo" style={{ height: 90, width: 220, marginRight: 0 }} />
+             </button>
       <div className="nav-links">
         {navItems.map((item) => (
           <button

@@ -1,4 +1,4 @@
-import logo from "../assets/logo.gif";
+import logo from "../assets/logo.svg";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -31,10 +31,10 @@ export default function Footer() {
         </div>
         <div>
           <p>Contact</p>
-          <a href="tel:+254791808323">0791 808 323</a>
+          <a href="tel:+254711402400">+254711402400</a>
           <a href="mailto:elitesportsgear254@gmail.com">elitesportsgear254@gmail.com</a>
           <a
-            href="https://wa.me/254791808323?text=Hello%20Elite%20Sports%20Gear%2C%20I%20would%20like%20to%20make%20an%20order."
+            href="https://wa.me/254711402400?text=Hello%20Elite%20Sports%20Gear%2C%20I%20would%20like%20to%20make%20an%20order."
             target="_blank"
             rel="noopener noreferrer"
           >

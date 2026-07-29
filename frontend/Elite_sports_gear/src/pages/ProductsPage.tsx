@@ -1,3 +1,8 @@
+import { useState } from 'react';
+
+
+
+   
 interface ProductsPageProps {
   catalog: Product[]
   loading: boolean
@@ -28,6 +33,8 @@ const currency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)
 
+
+
 export default function ProductsPage({
   catalog,
   loading,
@@ -37,7 +44,20 @@ export default function ProductsPage({
   categoryFilter,
   setCategoryFilter,
   categories,
-}: ProductsPageProps) {
+}: ProductsPageProps) 
+{
+const [addedProduct, setAddedProduct] = useState<number | null>(null);
+
+const handleAddToCart = (productId: number) => {
+
+   addToCart(productId);
+
+   setAddedProduct(productId);
+
+   setTimeout(() => {
+     setAddedProduct(null);
+   }, 2000);
+  };
   const cats = categories || []
 
   const visible = catalog.filter((product) => {
@@ -105,9 +125,13 @@ export default function ProductsPage({
               <p>{product.description}</p>
               <div className="card-footer">
                 <strong>{currency(product.price)}</strong>
-                <button className="primary-btn" onClick={() => addToCart(product.id)}>
-                  Add to cart
-                </button>
+                <button className={`primary-btn ${
+                  addedProduct === product.id ? "added-btn" : ""
+                }`}
+                onClick={() => handleAddToCart(product.id)}
+                >
+                  {addedProduct === product.id ? "✓ Added" : "Add to Cart"}
+                  </button>
               </div>
             </article>
           ))}

@@ -6,7 +6,7 @@
 }
 
 .top-nav {
-  background: linear-gradient(135deg, #81a6e0 0%, #041b59 100%);
+  background: black;
   color: white;
   padding: 1rem 2rem;
   display: flex;
@@ -166,7 +166,7 @@ main {
 }
 
 .primary-btn {
-  background: #2563eb;
+  background: #000000;
   color: white;
 }
 
@@ -329,7 +329,7 @@ main {
 }
 
 .active-tab {
-  background: #2563eb;
+  background: #23b000;
   color: white;
 }
 
@@ -403,13 +403,13 @@ main {
 }
 
 .site-footer {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  background: black;
   color: white;
   padding: 2.5rem;
   display: grid;
   grid-template-columns: minmax(14rem, 1.1fr) minmax(0, 2fr);
   gap: 2rem;
-  border-radius: 28px 28px 0 0;
+  
 }
 
 .footer-logo {
