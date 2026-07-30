@@ -9,6 +9,7 @@ from .views import (
     RegisterView,
     MpesaCallbackView,
     UserDetailView,
+    GoogleLoginView,
     CategoryViewSet,
 )
 
@@ -22,6 +23,7 @@ urlpatterns = [
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
+    path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
     path('auth/me/', UserDetailView.as_view(), name='auth-me'),
     path('', include(router.urls)),
 ]

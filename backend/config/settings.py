@@ -21,20 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-nc(pbmzf!l_l_9tta8j*ccs2)q+ycjmqknr2$x49i#v5q6#+4z'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-nc(pbmzf!l_l_9tta8j*ccs2)q+ycjmqknr2$x49i#v5q6#+4z')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    '[::1]',
-    'testserver',
-    '192.168.1.103',
-    '.ngrok-free.app',
-    '.ngrok.app',
+    host.strip()
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,[::1],testserver,192.168.1.103,.ngrok-free.app,.ngrok.app').split(',')
+    if host.strip()
 ]
 
 
@@ -87,12 +82,34 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    from urllib.parse import parse_qs, urlparse
+
+    parsed = urlparse(DATABASE_URL)
+    queries = parse_qs(parsed.query)
+    db_options = {}
+    if 'sslmode' in queries:
+        db_options['sslmode'] = queries['sslmode'][-1]
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed.path[1:],
+            'USER': parsed.username,
+            'PASSWORD': parsed.password,
+            'HOST': parsed.hostname,
+            'PORT': parsed.port or '',
+            'OPTIONS': db_options,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -134,6 +151,11 @@ STATIC_URL = 'static/'
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http://localhost:\d+$',
     r'^http://127\.0\.0\.1:\d+$',
+]
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+    if origin.strip()
 ]
 
 REST_FRAMEWORK = {

@@ -1,12 +1,14 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import requests
 
 from .models import Order, Product
 from .models import Category
@@ -220,3 +222,35 @@ class LoginView(APIView):
 
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key, 'username': user.username, 'email': user.email})
+
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'detail': 'Google token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        google_verify_url = 'https://oauth2.googleapis.com/tokeninfo'
+        response = requests.get(google_verify_url, params={'id_token': token})
+        if response.status_code != 200:
+            return Response({'detail': 'Invalid Google token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = response.json()
+        email = data.get('email')
+        username = data.get('name') or data.get('email', '').split('@')[0]
+        if not email:
+            return Response({'detail': 'Google account did not provide an email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(email=email).first()
+        if user is None:
+            candidate = username
+            if User.objects.filter(username=candidate).exists():
+                candidate = f"{candidate}-{get_random_string(6)}"
+            user = User(username=candidate, email=email)
+            user.set_unusable_password()
+            user.save()
+
+        token_obj, _ = Token.objects.get_or_create(user=user)
+        return Response({'token': token_obj.key, 'username': user.username, 'email': user.email})

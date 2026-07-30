@@ -12,11 +12,11 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           Discover boots, gloves, training gear, and match-day apparel built for performance.
         </p>
         <div className="hero-actions">
-          <button className="primary-btn" onClick={() => onNavigate('products')}>
-            Shop now
+          <button className="primary-btn" onClick={() => onNavigate('auth')}>
+            Sign in / Register
           </button>
-          <button className="secondary-btn" onClick={() => onNavigate('home')}>
-            Explore featured picks
+          <button className="secondary-btn" onClick={() => onNavigate('auth')}>
+            Browse featured picks
           </button>
         </div>
         <div className="hero-highlights">

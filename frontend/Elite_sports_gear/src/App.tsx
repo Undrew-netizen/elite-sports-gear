@@ -11,10 +11,12 @@ import CheckoutPage from './pages/CheckoutPage'
 import OrdersPage from './pages/OrdersPage'
 import AdminProducts from './pages/AdminProducts'
 import AdminOrders from './pages/AdminOrders'
+import AdminDashboard from './pages/AdminDashboard'
+import AuthPage from './pages/AuthPage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
-type Page = 'landing' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
+type Page = 'landing' | 'auth' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
 
 type Product = {
   id: number
@@ -146,9 +148,13 @@ function App() {
     } else {
       localStorage.removeItem('elite-auth-token')
     }
+  }, [authToken])
 
+  useEffect(() => {
     localStorage.setItem('elite-auth-user', JSON.stringify(authUser))
-    // fetch user details (is_staff) when token changes
+  }, [authUser])
+
+  useEffect(() => {
     const loadMe = async () => {
       if (!authToken) {
         setAuthIsAdmin(false)
@@ -170,7 +176,7 @@ function App() {
       }
     }
     void loadMe()
-  }, [authToken, authUser])
+  }, [authToken])
 
   const getAuthHeaders = () => {
     const headers: Record<string, string> = {
@@ -221,6 +227,27 @@ function App() {
       setAccountMode('login')
     } catch (error) {
       setAuthMessage(error instanceof Error ? error.message : 'Login error')
+    }
+  }
+
+  const handleGoogleLogin = async (idToken: string) => {
+    setAuthMessage(null)
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/google/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Google login failed')
+      }
+      setAuthToken(data.token)
+      setAuthUser({ username: data.username, email: data.email })
+      setAuthMessage('Logged in successfully.')
+      setAccountMode('login')
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Google login failed')
     }
   }
 
@@ -321,9 +348,13 @@ function App() {
     { key: 'orders', label: 'Orders' },
   ]
 
-  const navItems: { key: string; label: string }[] = authIsAdmin ? [...baseNav, { key: 'admin/products', label: 'Admin' }] : baseNav
+  const navItems: { key: string; label: string }[] = authIsAdmin ? [...baseNav, { key: 'admin', label: 'Admin' }] : baseNav
 
-  const goTo = (page: string) => navigate(page === 'home' ? '/home' : `/${page}`)
+  const goTo = (page: string) => {
+    if (page === 'home') return navigate('/home')
+    if (page === 'auth') return navigate('/auth')
+    return navigate(`/${page}`)
+  }
 
   return (
     <div className="app-shell">
@@ -335,16 +366,42 @@ function App() {
           <Route
             path="/home"
             element={
-              <HomePage
-                catalog={catalog}
-                loading={loading}
-                wishlist={wishlist}
-                toggleWishlist={toggleWishlist}
-                addToCart={addToCart}
-                categoryFilter={categoryFilter}
-                setCategoryFilter={setCategoryFilter}
-                categories={categories}
-                onNavigate={goTo}
+              authToken ? (
+                <HomePage
+                  catalog={catalog}
+                  loading={loading}
+                  wishlist={wishlist}
+                  toggleWishlist={toggleWishlist}
+                  addToCart={addToCart}
+                  categoryFilter={categoryFilter}
+                  setCategoryFilter={setCategoryFilter}
+                  categories={categories}
+                  onNavigate={goTo}
+                />
+              ) : (
+                <AuthPage
+                  authToken={authToken}
+                  authMessage={authMessage}
+                  accountMode={accountMode}
+                  setAccountMode={setAccountMode}
+                  handleLogin={handleLogin}
+                  handleRegister={handleRegister}
+                  handleGoogleLogin={handleGoogleLogin}
+                />
+              )
+            }
+          />
+          <Route
+            path="/auth"
+            element={
+              <AuthPage
+                authToken={authToken}
+                authMessage={authMessage}
+                accountMode={accountMode}
+                setAccountMode={setAccountMode}
+                handleLogin={handleLogin}
+                handleRegister={handleRegister}
+                handleGoogleLogin={handleGoogleLogin}
               />
             }
           />
@@ -396,8 +453,18 @@ function App() {
               />
             }
           />
-          <Route path="/admin/products" element={<AdminProducts authToken={authToken} />} />
-          <Route path="/admin/orders" element={<AdminOrders authToken={authToken} />} />
+          <Route
+            path="/admin"
+            element={authIsAdmin ? <AdminDashboard authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+          />
+          <Route
+            path="/admin/products"
+            element={authIsAdmin ? <AdminProducts authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+          />
+          <Route
+            path="/admin/orders"
+            element={authIsAdmin ? <AdminOrders authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+          />
           <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} />} />
         </Routes>
       </main>
