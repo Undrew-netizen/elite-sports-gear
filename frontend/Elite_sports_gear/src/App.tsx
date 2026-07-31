@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { API_BASE_URL } from './api'
 import LandingPage from './pages/LandingPage'
@@ -9,14 +9,14 @@ import WishlistPage from './pages/WishlistPage'
 import CartPage from './pages/CartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrdersPage from './pages/OrdersPage'
+import AuthPage from './pages/AuthPage'
 import AdminProducts from './pages/AdminProducts'
 import AdminOrders from './pages/AdminOrders'
 import AdminDashboard from './pages/AdminDashboard'
-import AuthPage from './pages/AuthPage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
-type Page = 'landing' | 'auth' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders'
+type Page = 'landing' | 'home' | 'products' | 'wishlist' | 'cart' | 'checkout' | 'orders' | 'auth' | 'admin' | 'admin-products' | 'admin-orders'
 
 type Product = {
   id: number
@@ -61,24 +61,17 @@ function App() {
   const [cart, setCart] = useState<Record<number, number>>({})
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [orderMessage, setOrderMessage] = useState<string | null>(null)
-  const [authToken, setAuthToken] = useState<string | null>(() => localStorage.getItem('elite-auth-token'))
-  const [authUser, setAuthUser] = useState<{ username: string | null; email: string | null }>(() => {
-    const storedUser = localStorage.getItem('elite-auth-user')
-    if (storedUser) {
-      try {
-        return JSON.parse(storedUser)
-      } catch {
-        return { username: null, email: null }
-      }
-    }
-    return { username: null, email: null }
-  })
-  const [authMessage, setAuthMessage] = useState<string | null>(null)
-  const [authIsAdmin, setAuthIsAdmin] = useState<boolean>(false)
   const [categoryFilter, setCategoryFilter] = useState<number | string | null>(null)
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
+  const [authToken, setAuthToken] = useState<string | null>(null)
+  const [authMessage, setAuthMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    const existingToken = localStorage.getItem('eliteAdminToken')
+    if (existingToken) {
+      setAuthToken(existingToken)
+    }
+
     const loadProducts = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/products/`)
@@ -141,74 +134,6 @@ function App() {
     }
   }, [currentPage])
 
-  useEffect(() => {
-    if (authToken) {
-      localStorage.setItem('elite-auth-token', authToken)
-    } else {
-      localStorage.removeItem('elite-auth-token')
-    }
-  }, [authToken])
-
-  useEffect(() => {
-    localStorage.setItem('elite-auth-user', JSON.stringify(authUser))
-  }, [authUser])
-
-  useEffect(() => {
-    const loadMe = async () => {
-      if (!authToken) {
-        setAuthIsAdmin(false)
-        return
-      }
-      try {
-        const resp = await fetch(`${API_BASE_URL}/api/auth/me/`, {
-          headers: { 'Content-Type': 'application/json', Authorization: `Token ${authToken}` },
-        })
-        if (!resp.ok) {
-          setAuthIsAdmin(false)
-          return
-        }
-        const data = await resp.json()
-        setAuthUser({ username: data.username, email: data.email })
-        setAuthIsAdmin(Boolean(data.is_staff))
-      } catch (e) {
-        setAuthIsAdmin(false)
-      }
-    }
-    void loadMe()
-  }, [authToken])
-
-  const getAuthHeaders = () => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (authToken) {
-      headers.Authorization = `Token ${authToken}`
-    }
-    return headers
-  }
-
-  const handleLogin = async (username: string, password: string) => {
-    setAuthMessage(null)
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data?.detail || 'Login failed')
-      }
-      setAuthToken(data.token)
-      setAuthUser({ username: data.username, email: data.email })
-      setAuthMessage('Logged in successfully.')
-    } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : 'Login error')
-    }
-  }
-
-
-
   const cartItems = useMemo(
     () =>
       catalog
@@ -266,7 +191,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/orders/create/`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: checkoutData.full_name,
           email: checkoutData.email,
@@ -290,6 +215,29 @@ function App() {
     }
   }
 
+  const handleLogin = async (username: string, password: string) => {
+    setAuthMessage(null)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.detail || 'Unable to sign in')
+      }
+
+      setAuthToken(data.token)
+      localStorage.setItem('eliteAdminToken', data.token)
+      setAuthMessage(null)
+      navigate('/admin')
+    } catch (error) {
+      setAuthMessage(error instanceof Error ? error.message : 'Unable to sign in')
+    }
+  }
+
   const baseNav = [
     { key: 'home', label: 'Home' },
     { key: 'products', label: 'Products' },
@@ -298,11 +246,10 @@ function App() {
     { key: 'orders', label: 'Orders' },
   ]
 
-  const navItems: { key: string; label: string }[] = authIsAdmin ? [...baseNav, { key: 'admin', label: 'Admin' }] : baseNav
+  const navItems: { key: string; label: string }[] = authToken ? [...baseNav, { key: 'admin', label: 'Admin' }] : baseNav
 
   const goTo = (page: string) => {
     if (page === 'home') return navigate('/home')
-    if (page === 'auth') return navigate('/auth')
     return navigate(`/${page}`)
   }
 
@@ -327,16 +274,6 @@ function App() {
                   categories={categories}
                   onNavigate={goTo}
                 />
-            }
-          />
-          <Route
-            path="/auth"
-            element={
-              <AuthPage
-                authToken={authToken}
-                authMessage={authMessage}
-                handleLogin={handleLogin}
-              />
             }
           />
           <Route
@@ -379,19 +316,20 @@ function App() {
               />
             }
           />
+          <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} />} />
+          <Route path="/auth" element={<AuthPage authToken={authToken} authMessage={authMessage} handleLogin={handleLogin} />} />
           <Route
             path="/admin"
-            element={authIsAdmin ? <AdminDashboard authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+            element={authToken ? <AdminDashboard authToken={authToken} /> : <Navigate to="/auth" replace />}
           />
           <Route
             path="/admin/products"
-            element={authIsAdmin ? <AdminProducts authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+            element={authToken ? <AdminProducts authToken={authToken} /> : <Navigate to="/auth" replace />}
           />
           <Route
             path="/admin/orders"
-            element={authIsAdmin ? <AdminOrders authToken={authToken} /> : <LandingPage onNavigate={goTo} />}
+            element={authToken ? <AdminOrders authToken={authToken} /> : <Navigate to="/auth" replace />}
           />
-          <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} />} />
         </Routes>
       </main>
 

@@ -22,7 +22,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         <div className="hero-highlights">
           <span>Secure M-Pesa checkout</span>
           <span>Fast delivery across Kenya</span>
-          <span>Admin portal access only</span>
+          <span>Shop without login</span>
         </div>
       </div>
       <div className="hero-card hero-card-strong">
