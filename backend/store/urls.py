@@ -6,10 +6,8 @@ from .views import (
     OrderCreateView,
     OrderViewSet,
     ProductViewSet,
-    RegisterView,
     MpesaCallbackView,
     UserDetailView,
-    GoogleLoginView,
     CategoryViewSet,
 )
 
@@ -21,9 +19,7 @@ router.register(r'categories', CategoryViewSet, basename='category')
 urlpatterns = [
     path('orders/create/', OrderCreateView.as_view(), name='order-create'),
     path('mpesa/callback/', MpesaCallbackView.as_view(), name='mpesa-callback'),
-    path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
-    path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
     path('auth/me/', UserDetailView.as_view(), name='auth-me'),
     path('', include(router.urls)),
 ]

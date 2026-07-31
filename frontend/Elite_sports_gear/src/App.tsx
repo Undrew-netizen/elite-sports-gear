@@ -74,7 +74,6 @@ function App() {
     return { username: null, email: null }
   })
   const [authMessage, setAuthMessage] = useState<string | null>(null)
-  const [accountMode, setAccountMode] = useState<'login' | 'register'>('login')
   const [authIsAdmin, setAuthIsAdmin] = useState<boolean>(false)
   const [categoryFilter, setCategoryFilter] = useState<number | string | null>(null)
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
@@ -188,27 +187,6 @@ function App() {
     return headers
   }
 
-  const handleRegister = async (username: string, email: string, password: string) => {
-    setAuthMessage(null)
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data?.detail || 'Registration failed')
-      }
-      setAuthToken(data.token)
-      setAuthUser({ username: data.username, email: data.email })
-      setAuthMessage('Account created successfully. You are now logged in.')
-      setAccountMode('login')
-    } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : 'Registration error')
-    }
-  }
-
   const handleLogin = async (username: string, password: string) => {
     setAuthMessage(null)
     try {
@@ -224,30 +202,8 @@ function App() {
       setAuthToken(data.token)
       setAuthUser({ username: data.username, email: data.email })
       setAuthMessage('Logged in successfully.')
-      setAccountMode('login')
     } catch (error) {
       setAuthMessage(error instanceof Error ? error.message : 'Login error')
-    }
-  }
-
-  const handleGoogleLogin = async (idToken: string) => {
-    setAuthMessage(null)
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/google/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: idToken }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data?.detail || 'Google login failed')
-      }
-      setAuthToken(data.token)
-      setAuthUser({ username: data.username, email: data.email })
-      setAuthMessage('Logged in successfully.')
-      setAccountMode('login')
-    } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : 'Google login failed')
     }
   }
 
@@ -255,7 +211,6 @@ function App() {
     setAuthToken(null)
     setAuthUser({ username: null, email: null })
     setAuthMessage('You have been logged out.')
-    setAccountMode('login')
     setAuthIsAdmin(false)
   }
 
@@ -382,11 +337,7 @@ function App() {
                 <AuthPage
                   authToken={authToken}
                   authMessage={authMessage}
-                  accountMode={accountMode}
-                  setAccountMode={setAccountMode}
                   handleLogin={handleLogin}
-                  handleRegister={handleRegister}
-                  handleGoogleLogin={handleGoogleLogin}
                 />
               )
             }
@@ -397,11 +348,7 @@ function App() {
               <AuthPage
                 authToken={authToken}
                 authMessage={authMessage}
-                accountMode={accountMode}
-                setAccountMode={setAccountMode}
                 handleLogin={handleLogin}
-                handleRegister={handleRegister}
-                handleGoogleLogin={handleGoogleLogin}
               />
             }
           />
@@ -441,14 +388,6 @@ function App() {
                 cartTotal={cartTotal}
                 cartItems={cartItems}
                 handleCheckout={handleCheckout}
-                authToken={authToken}
-                authUser={authUser}
-                accountMode={accountMode}
-                setAccountMode={setAccountMode}
-                handleLogin={handleLogin}
-                handleRegister={handleRegister}
-                authMessage={authMessage}
-                logout={logout}
                 orderMessage={orderMessage}
               />
             }

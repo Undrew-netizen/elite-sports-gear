@@ -1,14 +1,12 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
-from django.utils.crypto import get_random_string
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import requests
 
 from .models import Order, Product
 from .models import Category
@@ -16,7 +14,6 @@ from .serializers import (
     OrderCreateSerializer,
     OrderSerializer,
     ProductSerializer,
-    RegisterSerializer,
     CategorySerializer,
 )
 
@@ -178,28 +175,6 @@ class UserDetailView(APIView):
         return Response({'username': user.username, 'email': user.email, 'is_staff': user.is_staff})
 
 
-class RegisterView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        username = request.data.get('username')
-        email = request.data.get('email')
-        if not username or not email:
-            return Response({'detail': 'Username and email are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(username=username).exists():
-            return Response({'detail': 'Username already taken.'}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(email=email).exists():
-            return Response({'detail': 'Email already registered.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key, 'username': user.username, 'email': user.email}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -220,37 +195,8 @@ class LoginView(APIView):
         if user is None:
             return Response({'detail': 'Invalid username or password.'}, status=status.HTTP_401_UNAUTHORIZED)
 
+        if not user.is_staff:
+            return Response({'detail': 'Admin access required.'}, status=status.HTTP_403_FORBIDDEN)
+
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key, 'username': user.username, 'email': user.email})
-
-
-class GoogleLoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        token = request.data.get('token')
-        if not token:
-            return Response({'detail': 'Google token is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        google_verify_url = 'https://oauth2.googleapis.com/tokeninfo'
-        response = requests.get(google_verify_url, params={'id_token': token})
-        if response.status_code != 200:
-            return Response({'detail': 'Invalid Google token.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        data = response.json()
-        email = data.get('email')
-        username = data.get('name') or data.get('email', '').split('@')[0]
-        if not email:
-            return Response({'detail': 'Google account did not provide an email.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user = User.objects.filter(email=email).first()
-        if user is None:
-            candidate = username
-            if User.objects.filter(username=candidate).exists():
-                candidate = f"{candidate}-{get_random_string(6)}"
-            user = User(username=candidate, email=email)
-            user.set_unusable_password()
-            user.save()
-
-        token_obj, _ = Token.objects.get_or_create(user=user)
-        return Response({'token': token_obj.key, 'username': user.username, 'email': user.email})

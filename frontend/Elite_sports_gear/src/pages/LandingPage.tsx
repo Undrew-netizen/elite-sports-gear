@@ -13,7 +13,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </p>
         <div className="hero-actions">
           <button className="primary-btn" onClick={() => onNavigate('auth')}>
-            Sign in / Register
+            Admin sign in
           </button>
           <button className="secondary-btn" onClick={() => onNavigate('auth')}>
             Browse featured picks
@@ -22,7 +22,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         <div className="hero-highlights">
           <span>Secure M-Pesa checkout</span>
           <span>Fast delivery across Kenya</span>
-          <span>Register once, buy faster next time</span>
+          <span>Admin portal access only</span>
         </div>
       </div>
       <div className="hero-card hero-card-strong">

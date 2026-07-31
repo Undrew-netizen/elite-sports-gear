@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface CheckoutPageProps {
   orderPlaced: boolean
   cartTotal: number
   cartItems: Array<{ id: number; name: string; price: number; quantity: number; image?: string | null }>
-  authToken: string | null
-  authUser: { username: string | null; email: string | null }
-  accountMode: 'login' | 'register'
-  setAccountMode: (mode: 'login' | 'register') => void
-  handleLogin: (username: string, password: string) => Promise<void>
-  handleRegister: (username: string, email: string, password: string) => Promise<void>
-  authMessage: string | null
-  logout: () => void
   handleCheckout: (checkoutData: {
     full_name: string
     email: string
@@ -35,32 +27,14 @@ export default function CheckoutPage({
   orderPlaced,
   cartTotal,
   cartItems,
-  authToken,
-  authUser,
-  accountMode,
-  setAccountMode,
-  handleLogin,
-  handleRegister,
-  authMessage,
-  logout,
   handleCheckout,
   orderMessage,
 }: CheckoutPageProps) {
-  const [fullName, setFullName] = useState(authUser.username ?? '')
-  const [email, setEmail] = useState(authUser.email ?? '')
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
-  const [loginUsername, setLoginUsername] = useState('')
-  const [loginPassword, setLoginPassword] = useState('')
-  const [registerUsername, setRegisterUsername] = useState('')
-  const [registerEmail, setRegisterEmail] = useState('')
-  const [registerPassword, setRegisterPassword] = useState('')
-
-  useEffect(() => {
-    setEmail(authUser.email ?? '')
-    setFullName(authUser.username ?? '')
-  }, [authUser])
 
   const buildWhatsAppUrl = (orderId: number | string, normalizedPhone: string) => {
     const itemLines = cartItems.flatMap((item) => {
@@ -116,16 +90,6 @@ export default function CheckoutPage({
     }
   }
 
-  const submitLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    await handleLogin(loginUsername, loginPassword)
-  }
-
-  const submitRegister = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    await handleRegister(registerUsername, registerEmail, registerPassword)
-  }
-
   return (
     <section className="checkout-layout">
       <div className="summary-card">
@@ -136,89 +100,14 @@ export default function CheckoutPage({
           <p>Your order was saved. WhatsApp will open with the order details ready to send.</p>
         ) : (
           <>
-            {authMessage ? <div className="alert-message">{authMessage}</div> : null}
-            {authToken ? (
-              <div className="account-chip">
-                <strong>Logged in as</strong> {authUser.username || authUser.email}
-                <button className="secondary-btn" type="button" onClick={logout}>
-                  Log out
-                </button>
-              </div>
-            ) : (
-              <div className="checkout-tabs">
-                <button
-                  className={`secondary-btn ${accountMode === 'login' ? 'active-tab' : ''}`}
-                  type="button"
-                  onClick={() => setAccountMode('login')}
-                >
-                  Login
-                </button>
-                <button
-                  className={`secondary-btn ${accountMode === 'register' ? 'active-tab' : ''}`}
-                  type="button"
-                  onClick={() => setAccountMode('register')}
-                >
-                  Create account
-                </button>
-              </div>
-            )}
-
-            {accountMode === 'login' && !authToken ? (
-              <form onSubmit={submitLogin} className="checkout-form">
-                <input
-                  type="text"
-                  placeholder="Username or email"
-                  required
-                  value={loginUsername}
-                  onChange={(e) => setLoginUsername(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  required
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
-                <button className="primary-btn wide" type="submit">
-                  Login
-                </button>
-              </form>
-            ) : accountMode === 'register' && !authToken ? (
-              <form onSubmit={submitRegister} className="checkout-form">
-                <input
-                  type="text"
-                  placeholder="Username"
-                  required
-                  value={registerUsername}
-                  onChange={(e) => setRegisterUsername(e.target.value)}
-                />
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  required
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="Password"
-                  required
-                  value={registerPassword}
-                  onChange={(e) => setRegisterPassword(e.target.value)}
-                />
-                <button className="primary-btn wide" type="submit">
-                  Create account
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={submitCheckout} className="checkout-form">
-                <input
-                  type="text"
-                  placeholder="Full name"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
+            <form onSubmit={submitCheckout} className="checkout-form">
+              <input
+                type="text"
+                placeholder="Full name"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
                 <input
                   type="email"
                   placeholder="Email address"
@@ -245,9 +134,7 @@ export default function CheckoutPage({
                 </button>
                 {checkoutMessage ? <div className="alert-message">{checkoutMessage}</div> : null}
               </form>
-            )}
-          </>
-        )}
+          )}
       </div>
       <aside className="summary-card summary-card-large">
         <div className="summary-stack">
