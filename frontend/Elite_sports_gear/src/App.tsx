@@ -207,12 +207,7 @@ function App() {
     }
   }
 
-  const logout = () => {
-    setAuthToken(null)
-    setAuthUser({ username: null, email: null })
-    setAuthMessage('You have been logged out.')
-    setAuthIsAdmin(false)
-  }
+
 
   const cartItems = useMemo(
     () =>

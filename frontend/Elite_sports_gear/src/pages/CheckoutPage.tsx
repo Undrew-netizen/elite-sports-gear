@@ -134,7 +134,7 @@ export default function CheckoutPage({
                 </button>
                 {checkoutMessage ? <div className="alert-message">{checkoutMessage}</div> : null}
               </form>
-          )}
+            </>)}
       </div>
       <aside className="summary-card summary-card-large">
         <div className="summary-stack">
