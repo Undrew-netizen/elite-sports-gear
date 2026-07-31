@@ -174,11 +174,11 @@ STATIC_URL = 'static/'
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http://localhost:\d+$',
     r'^http://127\.0\.0\.1:\d+$',
-    r'^elitesportsgear-co-ke.onrender.com'
+    r'^https://elitesportsgear-co-ke.onrender.com$'
 ]
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://elitesportsgear-co-ke.onrender.com').split(',')
     if origin.strip()
 ]
 
