@@ -75,7 +75,7 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,[::1],testserver,192.168.1.103,.ngrok-free.app,.ngrok.app,elitesportsgear.co.ke,www.elitesportsgear.co.ke').split(',')
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,[::1],testserver,192.168.1.103,.ngrok-free.app,.ngrok.app').split(',')
     if host.strip()
 ]
 
@@ -174,10 +174,11 @@ STATIC_URL = 'static/'
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^http://localhost:\d+$',
     r'^http://127\.0\.0\.1:\d+$',
+    r'^elitesportsgear-co-ke.onrender.com'
 ]
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://elitesportsgear.co.ke,https://www.elitesportsgear.co.ke').split(',')
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
     if origin.strip()
 ]
 
