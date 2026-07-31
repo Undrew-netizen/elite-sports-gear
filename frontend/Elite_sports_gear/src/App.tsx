@@ -316,7 +316,6 @@ function App() {
           <Route
             path="/home"
             element={
-              authToken ? (
                 <HomePage
                   catalog={catalog}
                   loading={loading}
@@ -328,13 +327,6 @@ function App() {
                   categories={categories}
                   onNavigate={goTo}
                 />
-              ) : (
-                <AuthPage
-                  authToken={authToken}
-                  authMessage={authMessage}
-                  handleLogin={handleLogin}
-                />
-              )
             }
           />
           <Route

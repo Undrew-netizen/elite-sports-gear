@@ -68,7 +68,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class OrderCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = OrderCreateSerializer(data=request.data, context={'user': request.user})
