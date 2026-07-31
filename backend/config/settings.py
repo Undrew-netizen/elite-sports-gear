@@ -28,8 +28,16 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 DB_SSLMODE = os.getenv('DB_SSLMODE')
+USE_SQLITE = os.getenv('USE_SQLITE', 'True').lower() in ('true', '1', 'yes')
 
-if DATABASE_URL:
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(BASE_DIR / 'db.sqlite3'),
+        }
+    }
+elif DATABASE_URL:
     parsed = urlparse(DATABASE_URL)
     queries = parse_qs(parsed.query)
     sslmode = DB_SSLMODE or queries.get('sslmode', [None])[-1]
@@ -67,7 +75,7 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,[::1],testserver,192.168.1.103,.ngrok-free.app,.ngrok.app').split(',')
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0,[::1],testserver,192.168.1.103,.ngrok-free.app,.ngrok.app,elitesportsgear.co.ke,www.elitesportsgear.co.ke').split(',')
     if host.strip()
 ]
 
@@ -169,7 +177,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://elitesportsgear.co.ke,https://www.elitesportsgear.co.ke').split(',')
     if origin.strip()
 ]
 
