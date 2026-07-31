@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+from urllib.parse import parse_qs, urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +23,44 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-nc(pbmzf!l_l_9tta8j*ccs2)q+ycjmqknr2$x49i#v5q6#+4z')
+load_dotenv()
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+
+DATABASE_URL = os.getenv('DATABASE_URL')
+DB_SSLMODE = os.getenv('DB_SSLMODE')
+
+if DATABASE_URL:
+    parsed = urlparse(DATABASE_URL)
+    queries = parse_qs(parsed.query)
+    sslmode = DB_SSLMODE or queries.get('sslmode', [None])[-1]
+    options = {}
+    if sslmode:
+        options['sslmode'] = sslmode
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': parsed.path.lstrip('/'),
+            'USER': parsed.username,
+            'PASSWORD': parsed.password,
+            'HOST': parsed.hostname,
+            'PORT': parsed.port or '',
+            'OPTIONS': options,
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
+            'PORT': os.getenv('DB_PORT'),
+            'OPTIONS': {'sslmode': DB_SSLMODE} if DB_SSLMODE else {},
+        }
+    }
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
@@ -79,37 +118,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASE_URL = os.getenv('DATABASE_URL')
-if DATABASE_URL:
-    from urllib.parse import parse_qs, urlparse
 
-    parsed = urlparse(DATABASE_URL)
-    queries = parse_qs(parsed.query)
-    db_options = {}
-    if 'sslmode' in queries:
-        db_options['sslmode'] = queries['sslmode'][-1]
 
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': parsed.path[1:],
-            'USER': parsed.username,
-            'PASSWORD': parsed.password,
-            'HOST': parsed.hostname,
-            'PORT': parsed.port or '',
-            'OPTIONS': db_options,
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+
+
+
+
 
 
 # Password validation
@@ -177,10 +192,3 @@ BUSINESS_EMAIL = 'elitesportsgear254@gmail.com'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# M-Pesa configuration placeholders (set these in your environment or here)
-MPESA_ENV = os.getenv('MPESA_ENV', 'sandbox')  # or 'production'
-MPESA_CONSUMER_KEY = os.getenv('MPESA_CONSUMER_KEY', 'XBO56O4dbEkzAGUFV8Z6a0khAhzzv0eMyjREYkARaWCoe5vS')
-MPESA_CONSUMER_SECRET = os.getenv('MPESA_CONSUMER_SECRET', 'C1vs5u8jGQTP5MroNGIqAXuSOJBAU35P5P1OkJ3G5JqGRSFBqLiEx05evVHW3w4X')
-MPESA_SHORTCODE = os.getenv('MPESA_SHORTCODE', '')
-MPESA_PASSKEY = os.getenv('MPESA_PASSKEY', '')
-MPESA_CALLBACK_URL = os.getenv('MPESA_CALLBACK_URL', 'https://your-domain.com/api/mpesa/callback/')
