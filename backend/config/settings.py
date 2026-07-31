@@ -178,8 +178,14 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://elitesportsgear-co-ke.onrender.com').split(',')
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS', 
+        'http://localhost:5173,http://127.0.0.1:5173,https://elitesportsgear-co-ke.onrender.com,https://elitesportsgear.co.ke,https://elite-sports-gear-hnzy-git-main-undrew-netizens-projects.vercel.app'
+    ).split(',')
     if origin.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://elitesportsgear.co.ke",
 ]
 
 REST_FRAMEWORK = {
