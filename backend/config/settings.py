@@ -171,6 +171,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://elite-sports-gear-.*\.vercel\.app$",
+]
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
