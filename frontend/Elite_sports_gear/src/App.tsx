@@ -276,6 +276,13 @@ function App() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('eliteAdminToken')
+    setAuthToken(null)
+    setAuthMessage(null)
+    navigate('/auth')
+  }
+
   const baseNav = [
     { key: 'home', label: 'Home' },
     { key: 'products', label: 'Products' },
@@ -293,7 +300,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      <Navbar currentPage={currentPage} navItems={navItems} onNavigate={goTo} cartCount={cartCount} />
+      <Navbar currentPage={currentPage} navItems={navItems} onNavigate={goTo} cartCount={cartCount} onLogout={handleLogout} />
 
       <main>
         <Routes>

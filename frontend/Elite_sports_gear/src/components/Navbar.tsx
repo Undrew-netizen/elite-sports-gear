@@ -6,6 +6,7 @@ interface NavbarProps {
   navItems: Array<{ key: string; label: string }>
   onNavigate: (page: string) => void
   cartCount?: number
+  onLogout?: () => void
 }
 
 function Icon({ name }: { name: string }) {
@@ -45,7 +46,9 @@ function Icon({ name }: { name: string }) {
   }
 }
 
-export default function Navbar({ currentPage, navItems, onNavigate, cartCount = 0 }: NavbarProps) {
+export default function Navbar({ currentPage, navItems, onNavigate, cartCount = 0, onLogout }: NavbarProps) {
+  const isAdminPage = currentPage.startsWith('admin')
+
   return (
     <nav className="top-nav">
       <button className="brand-btn" onClick={() => onNavigate('home')}>
@@ -67,6 +70,11 @@ export default function Navbar({ currentPage, navItems, onNavigate, cartCount = 
             )}
           </button>
         ))}
+        {isAdminPage && onLogout ? (
+          <button className="logout-btn" onClick={onLogout} type="button">
+            Log out
+          </button>
+        ) : null}
       </div>
     </nav>
   )
