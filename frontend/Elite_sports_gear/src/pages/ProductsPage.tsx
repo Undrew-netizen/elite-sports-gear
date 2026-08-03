@@ -6,6 +6,7 @@ import { useState } from 'react';
 interface ProductsPageProps {
   catalog: Product[]
   loading: boolean
+  error?: string | null
   wishlist: number[]
   toggleWishlist: (id: number) => void
   addToCart: (id: number) => void
@@ -38,6 +39,7 @@ const currency = (value: number) =>
 export default function ProductsPage({
   catalog,
   loading,
+  error,
   wishlist,
   toggleWishlist,
   addToCart,
@@ -70,14 +72,19 @@ const handleAddToCart = (productId: number) => {
       <div className="page-intro">
         <div>
           <p className="eyebrow">Shop all</p>
-          <h2>Football gear for every position</h2>
+          <h2>Football gear for every position <span className="heading-accent">.</span></h2>
         </div>
       </div>
       {loading ? (
         <p>Loading products…</p>
+      ) : error ? (
+        <div className="empty-state">
+          <h3>Unable to load products</h3>
+          <p>{error}</p>
+        </div>
       ) : (
         <>
-          <div className="category-list" style={{ marginBottom: 12 }}>
+          <div className="category-list">
             <button className={`secondary-btn ${!categoryFilter ? 'active-tab' : ''}`} onClick={() => setCategoryFilter && setCategoryFilter(null)}>
               All
             </button>

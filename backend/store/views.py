@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.core.mail import send_mail
+import logging
 from rest_framework import status, viewsets
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
@@ -18,6 +19,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -74,8 +76,10 @@ class OrderCreateView(APIView):
         serializer = OrderCreateSerializer(data=request.data, context={'user': request.user})
         if serializer.is_valid():
             order = serializer.save()
-            # send emails
-            self._send_order_emails(order, serializer.validated_data)
+            try:
+                self._send_order_emails(order, serializer.validated_data)
+            except Exception:
+                logger.exception('Order %s was created but its confirmation email could not be sent.', order.id)
 
             result = OrderSerializer(order, context={'request': request}).data
 
@@ -108,71 +112,23 @@ class OrderCreateView(APIView):
         send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipient_list)
 
 
-class MpesaCallbackView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        payload = request.data or {}
-        # STK callback nested under Body.stkCallback
-        stk = payload.get('Body', {}).get('stkCallback') if isinstance(payload, dict) else None
-        if not stk:
-            return Response({'detail': 'Invalid callback payload'}, status=status.HTTP_400_BAD_REQUEST)
-
-        checkout_request_id = stk.get('CheckoutRequestID')
-        result_code = stk.get('ResultCode')
-        result_desc = stk.get('ResultDesc')
-
-        order = None
-        if checkout_request_id:
-            order = Order.objects.filter(mpesa_checkout_request_id=checkout_request_id).first()
-
-        if not order:
-            return Response({'detail': 'Order not found for checkout id'}, status=status.HTTP_404_NOT_FOUND)
-
-        if str(result_code) == '0':
-            order.status = Order.STATUS_CONFIRMED
-            order.save()
-            # send confirmation email with details
-            self._send_payment_confirmation_email(order)
-        else:
-            # keep order as placed; optionally store failure info
-            order.status = Order.STATUS_PLACED
-            order.save()
-
-        return Response({'status': 'ok'})
-
-    def _send_payment_confirmation_email(self, order):
-        subject = f'Payment received for order #{order.id}'
-        lines = [
-            f'Payment received for Order #{order.id}',
-            f'Name: {order.customer_name}',
-            f'Phone: {order.customer_phone}',
-            f'Email: {order.customer_email}',
-            f'Address: {order.delivery_address}',
-            f'Payment method: {order.payment_method}',
-            '',
-            'Items:',
-        ]
-        for item in order.items.all():
-            lines.append(f'{item.quantity} x {item.product.name} @ KES {item.unit_price}')
-        lines.append('')
-        lines.append(f'Total: KES {order.total}')
-        body = '\n'.join(lines)
-
-        recipient_list = [order.customer_email]
-        business_email = getattr(settings, 'BUSINESS_EMAIL', None)
-        if business_email:
-            recipient_list.append(business_email)
-
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipient_list)
-
-
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         return Response({'username': user.username, 'email': user.email, 'is_staff': user.is_staff})
+
+
+class GuestOrderTrackingView(APIView):
+    """Returns an order only when the customer presents its unguessable tracking token."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        order = Order.objects.filter(tracking_token=token).first()
+        if not order:
+            return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(OrderSerializer(order, context={'request': request}).data)
 
 
 class LoginView(APIView):

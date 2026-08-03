@@ -1,6 +1,7 @@
 interface OrdersPageProps {
   orders: Order[]
   ordersLoading: boolean
+  error?: string | null
 }
 
 type Product = {
@@ -38,17 +39,23 @@ const currency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value)
 
-export default function OrdersPage({ orders, ordersLoading }: OrdersPageProps) {
+export default function OrdersPage({ orders, ordersLoading, error }: OrdersPageProps) {
   return (
     <section>
       <div className="page-intro">
         <div>
           <p className="eyebrow">Your orders</p>
           <h2>Track your recent orders</h2>
+          <p>Your orders are stored securely on this device.</p>
         </div>
       </div>
       {ordersLoading ? (
         <p>Loading orders…</p>
+      ) : error ? (
+        <div className="empty-state">
+          <h3>Unable to load orders</h3>
+          <p>{error}</p>
+        </div>
       ) : orders.length === 0 ? (
         <div className="empty-state">
           <h3>No orders yet.</h3>

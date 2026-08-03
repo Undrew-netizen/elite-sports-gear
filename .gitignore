@@ -5,3 +5,8 @@
 **/.env.*
 backend/.env
 backend/.env.*
+
+# Python bytecode and local environments
+__pycache__/
+*.py[cod]
+.venv/

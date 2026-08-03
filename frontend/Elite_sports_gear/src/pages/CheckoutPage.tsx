@@ -35,6 +35,7 @@ export default function CheckoutPage({
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const buildWhatsAppUrl = (orderId: number | string, normalizedPhone: string) => {
     const itemLines = cartItems.flatMap((item) => {
@@ -72,6 +73,7 @@ export default function CheckoutPage({
     }
     const normalizedPhone = '254' + m[1]
     setCheckoutMessage(null)
+    setIsSubmitting(true)
 
     try {
       const result = await handleCheckout({
@@ -87,6 +89,8 @@ export default function CheckoutPage({
       }
     } catch (err) {
       // handle error already set in App state
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -129,8 +133,8 @@ export default function CheckoutPage({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
-                <button className="primary-btn wide" type="submit">
-                  Continue to WhatsApp
+                <button className="primary-btn wide" type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving your order...' : 'Continue to WhatsApp'}
                 </button>
                 {checkoutMessage ? <div className="alert-message">{checkoutMessage}</div> : null}
               </form>

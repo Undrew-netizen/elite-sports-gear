@@ -27,7 +27,7 @@ export default function Footer() {
           <span>Secure checkout</span>
           <span>Order confirmation by email</span>
           <span>Fast local delivery</span>
-          <span>M-Pesa and card payments</span>
+          <span>WhatsApp order confirmation</span>
         </div>
         <div>
           <p>Contact</p>
@@ -50,7 +50,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-note">
-        <p>Secure payments via M-Pesa and card. Your order details are emailed to you and our store.</p>
+        <p>Send your order details via WhatsApp and receive confirmation from our store.</p>
         <p>&copy; {year} Elite Sports Gear. All rights reserved.</p>
       </div>
     </footer>

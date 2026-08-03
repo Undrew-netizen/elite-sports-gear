@@ -30,7 +30,7 @@ type Product = {
   image?: string | null
 }
 
-// API_BASE_URL imported from src/api.ts
+
 
 type OrderItem = {
   id: number
@@ -49,16 +49,35 @@ type Order = {
   items: OrderItem[]
 }
 
+const ORDER_TRACKING_STORAGE_KEY = 'eliteGuestOrderTokens'
+const CART_STORAGE_KEY = 'eliteCart'
+
+const getStoredCart = (): Record<number, number> => {
+  try {
+    const savedCart = JSON.parse(localStorage.getItem(CART_STORAGE_KEY) || '{}') as Record<string, unknown>
+    return Object.entries(savedCart).reduce<Record<number, number>>((cart, [id, quantity]) => {
+      if (Number.isInteger(Number(id)) && typeof quantity === 'number' && quantity > 0) {
+        cart[Number(id)] = quantity
+      }
+      return cart
+    }, {})
+  } catch {
+    return {}
+  }
+}
+
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
   const [catalog, setCatalog] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [orders, setOrders] = useState<Order[]>([])
+  const [ordersError, setOrdersError] = useState<string | null>(null)
   const currentPage = (location.pathname.replace('/', '') || 'landing') as Page
   const [wishlist, setWishlist] = useState<number[]>([1, 3])
-  const [cart, setCart] = useState<Record<number, number>>({})
+  const [cart, setCart] = useState<Record<number, number>>(getStoredCart)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [orderMessage, setOrderMessage] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<number | string | null>(null)
@@ -73,6 +92,7 @@ function App() {
     }
 
     const loadProducts = async () => {
+      setCatalogError(null)
       try {
         const response = await fetch(`${API_BASE_URL}/api/products/`)
         if (!response.ok) {
@@ -82,21 +102,31 @@ function App() {
         setCatalog(data)
       } catch (error) {
         console.error(error)
+        setCatalogError('We could not load the gear right now. Please refresh and try again.')
       } finally {
         setLoading(false)
       }
     }
 
     const loadOrders = async () => {
+      setOrdersError(null)
+      const tokens = JSON.parse(localStorage.getItem(ORDER_TRACKING_STORAGE_KEY) || '[]') as string[]
+      if (tokens.length === 0) {
+        setOrders([])
+        setOrdersLoading(false)
+        return
+      }
       try {
-        const response = await fetch(`${API_BASE_URL}/api/orders/`)
-        if (!response.ok) {
-          throw new Error('Unable to fetch orders')
-        }
-        const data = (await response.json()) as Order[]
-        setOrders(data)
+        const results = await Promise.all(
+          tokens.map(async (token) => {
+            const response = await fetch(`${API_BASE_URL}/api/orders/track/${token}/`)
+            return response.ok ? (response.json() as Promise<Order>) : null
+          }),
+        )
+        setOrders(results.filter((order): order is Order => order !== null))
       } catch (error) {
         console.error(error)
+        setOrdersError('We could not load your saved orders right now. Please try again shortly.')
       } finally {
         setOrdersLoading(false)
       }
@@ -133,6 +163,10 @@ function App() {
       void loadOrders()
     }
   }, [currentPage])
+
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+  }, [cart])
 
   const cartItems = useMemo(
     () =>
@@ -207,6 +241,10 @@ function App() {
       }
       setOrderPlaced(true)
       setCart({})
+      if (data.tracking_token) {
+        const tokens = JSON.parse(localStorage.getItem(ORDER_TRACKING_STORAGE_KEY) || '[]') as string[]
+        localStorage.setItem(ORDER_TRACKING_STORAGE_KEY, JSON.stringify([...new Set([data.tracking_token, ...tokens])]))
+      }
       setOrderMessage(`Order #${data.id} placed. Confirmation sent to ${checkoutData.email}.`)
       return data
     } catch (error) {
@@ -266,6 +304,7 @@ function App() {
                 <HomePage
                   catalog={catalog}
                   loading={loading}
+                  error={catalogError}
                   wishlist={wishlist}
                   toggleWishlist={toggleWishlist}
                   addToCart={addToCart}
@@ -282,6 +321,7 @@ function App() {
               <ProductsPage
                 catalog={catalog}
                 loading={loading}
+                error={catalogError}
                 wishlist={wishlist}
                 toggleWishlist={toggleWishlist}
                 addToCart={addToCart}
@@ -316,7 +356,7 @@ function App() {
               />
             }
           />
-          <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} />} />
+          <Route path="/orders" element={<OrdersPage orders={orders} ordersLoading={ordersLoading} error={ordersError} />} />
           <Route path="/auth" element={<AuthPage authToken={authToken} authMessage={authMessage} handleLogin={handleLogin} />} />
           <Route
             path="/admin"

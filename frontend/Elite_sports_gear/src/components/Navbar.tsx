@@ -49,7 +49,7 @@ export default function Navbar({ currentPage, navItems, onNavigate, cartCount = 
   return (
     <nav className="top-nav">
       <button className="brand-btn" onClick={() => onNavigate('home')}>
-        <img src={logo} alt="Logo" style={{ height: 90, width: 220, marginRight: 0 }} />
+        <img src={logo} alt="Elite Sports Gear" className="brand-logo" />
              </button>
       <div className="nav-links">
         {navItems.map((item) => (

@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 
 
 class Product(models.Model):
@@ -41,14 +42,14 @@ class Order(models.Model):
     delivery_address = models.TextField(blank=True)
     payment_method = models.CharField(
         max_length=20,
-        choices=[('whatsapp', 'WhatsApp'), ('card', 'Card'), ('mpesa', 'M-Pesa')],
-        default='card',
+        choices=[('whatsapp', 'WhatsApp')],
+        default='whatsapp',
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PLACED)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    mpesa_checkout_request_id = models.CharField(max_length=120, blank=True, null=True)
+    tracking_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     def __str__(self) -> str:
         return f"Order #{self.id} - {self.status}"

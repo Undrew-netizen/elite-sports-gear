@@ -1,6 +1,7 @@
 interface HomePageProps {
   catalog: Product[]
   loading: boolean
+  error?: string | null
   wishlist: number[]
   toggleWishlist: (id: number) => void
   addToCart: (id: number) => void
@@ -32,6 +33,7 @@ const currency = (value: number) =>
 export default function HomePage({
   catalog,
   loading,
+  error,
   wishlist,
   toggleWishlist,
   addToCart,
@@ -54,7 +56,7 @@ export default function HomePage({
       <div className="page-intro">
         <div>
           <p className="eyebrow">Featured products</p>
-          <h2>Top picks for the season</h2>
+          <h2>Top picks for the season <span className="heading-accent">.</span></h2>
         </div>
         <button className="secondary-btn" onClick={() => onNavigate('products')}>
           Browse all gear
@@ -62,9 +64,14 @@ export default function HomePage({
       </div>
       {loading ? (
         <p>Loading featured gear…</p>
+      ) : error ? (
+        <div className="empty-state">
+          <h3>Unable to load featured gear</h3>
+          <p>{error}</p>
+        </div>
       ) : (
         <>
-          <div className="category-list" style={{ marginBottom: 12 }}>
+          <div className="category-list">
             <button className={`secondary-btn ${!categoryFilter ? 'active-tab' : ''}`} onClick={() => setCategoryFilter && setCategoryFilter(null)}>
               All
             </button>

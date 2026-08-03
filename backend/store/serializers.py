@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import Product, Order, OrderItem
@@ -78,6 +79,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'total',
             'created_at',
             'updated_at',
+            'tracking_token',
             'items',
         ]
 
@@ -92,7 +94,7 @@ class OrderCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
     address = serializers.CharField(max_length=500)
     phone = serializers.CharField(max_length=30, allow_blank=True, required=False)
-    payment_method = serializers.ChoiceField(choices=[('whatsapp', 'WhatsApp'), ('card', 'Card'), ('mpesa', 'M-Pesa')])
+    payment_method = serializers.ChoiceField(choices=[('whatsapp', 'WhatsApp')])
     items = OrderItemCreateSerializer(many=True)
 
     def validate_items(self, value):
@@ -113,26 +115,30 @@ class OrderCreateSerializer(serializers.Serializer):
     def create(self, validated_data):
         user = self.context.get('user')
         items_data = validated_data.pop('items')
-        order = Order.objects.create(
-            user=user,
-            customer_name=validated_data.get('full_name', ''),
-            customer_phone=validated_data.get('phone', ''),
-            customer_email=validated_data.get('email', ''),
-            delivery_address=validated_data.get('address', ''),
-            payment_method=validated_data.get('payment_method', 'card'),
-            total=0,
-        )
-        total = 0
-        for item_data in items_data:
-            product = Product.objects.filter(id=item_data['product_id']).first()
-            if not product:
-                raise serializers.ValidationError({'items': f"Product with id {item_data['product_id']} not found."})
-            unit_price = product.price
-            quantity = item_data['quantity']
-            OrderItem.objects.create(order=order, product=product, quantity=quantity, unit_price=unit_price)
-            total += unit_price * quantity
-        order.total = total
-        order.save()
+        product_ids = [item['product_id'] for item in items_data]
+        products = Product.objects.in_bulk(product_ids)
+        missing_ids = sorted(set(product_ids) - set(products))
+        if missing_ids:
+            raise serializers.ValidationError({'items': f"Product(s) not found: {', '.join(map(str, missing_ids))}."})
+
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=user if getattr(user, 'is_authenticated', False) else None,
+                customer_name=validated_data.get('full_name', ''),
+                customer_phone=validated_data.get('phone', ''),
+                customer_email=validated_data.get('email', ''),
+                delivery_address=validated_data.get('address', ''),
+                payment_method=validated_data.get('payment_method', 'whatsapp'),
+                total=0,
+            )
+            total = 0
+            for item_data in items_data:
+                product = products[item_data['product_id']]
+                quantity = item_data['quantity']
+                OrderItem.objects.create(order=order, product=product, quantity=quantity, unit_price=product.price)
+                total += product.price * quantity
+            order.total = total
+            order.save(update_fields=['total'])
         return order
 
 
